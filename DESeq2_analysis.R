@@ -35,6 +35,7 @@ gpl_1919 <- Table(getGEO("GPL91"))
 #Combine the expression & platform data into a list
 expression_matrices <- list(exprs_gse82107, exprs_gse77298, exprs_gse55235, exprs_gse1919)
 platform_files <- list(gpl_82107, gpl_77298, gpl_55235, gpl_1919)
+processed_exp_list <- list()
 
 #Loop through each expression file and its corresponding platform file
 for (i in 1:length(expression_matrices)) 
