@@ -1,5 +1,6 @@
 #Set working directory
-setwd("//wsl.localhost/Ubuntu/home/jyothi/Github_projects/RA_2")
+setwd("//wsl.localhost/Ubuntu/home/jyothi/Github_projects/RA_Mar5")
+
 #Install required packages
 BiocManager::install("GEOquery", force = TRUE)
 library(GEOquery)
@@ -75,13 +76,13 @@ metadata_files <- list("Metadata_Dataset_1.csv",
                        "Metadata_Dataset_3.csv", 
                        "Metadata_Dataset_4.csv")
 
-#Open a single PDF file to save all MA and volcano plots
-pdf("All_MA_and_Volcano_plots.pdf")
+#Open a PDF file to save all MA and volcano plots
+pdf("All_MA_Volcano_Heatmap_plots.pdf")
 
 #Loop through each dataset and metadata pair
 for (i in 1:length(expression_files)) 
 {
-  # Read the expression dataset
+  #Read the expression dataset
   ped <- read.csv(expression_files[[i]])
   #Make duplicate rows unique by gene symbol
   rownames(ped) <- make.unique(as.character(ped$Gene_Symbol))
@@ -115,4 +116,58 @@ for (i in 1:length(expression_files))
   print(volcano_plot)
 }
 #Close the PDF device to save all plots
+dev.off()
+
+
+#Define file names for the processed expression data and updated DEGs
+exp_files_with_symbols <- c("Gene_symbol_Processed_Expression_Dataset_1.csv", 
+                            "Gene_symbol_Processed_Expression_Dataset_2.csv", 
+                            "Gene_symbol_Processed_Expression_Dataset_3.csv", 
+                            "Gene_symbol_Processed_Expression_Dataset_4.csv")
+
+updated_DEGs <- c("Updated_Significant_DEGs1.csv",
+                  "Updated_Significant_DEGs2.csv", 
+                  "Updated_Significant_DEGs3.csv", 
+                  "Updated_Significant_DEGs4.csv")
+
+#Open a PDF file to save all heatmaps
+pdf("All_Heatmaps.pdf", width = 10, height = 8)
+#Loop through the files
+for (i in 1:4) 
+{
+  #Read the expression files
+  u1 <- read.csv(exp_files_with_symbols[i], row.names = 1)
+  #Read the DEG file
+  u2 <- read.csv(updated_DEGs[i], row.names = 1)
+  #Convert the rownames as a separate column - in this case, gene symbols
+  u2 <- cbind(Gene_Symbol = rownames(u2), u2)
+  #Remove the rownames
+  rownames(u2) <- NULL
+  #Find common genes between both the files
+  common_genes <- intersect(u1$Gene_Symbol, u2$Gene_Symbol)
+  #Print the number of common genes
+  print(paste("Number of matching genes:", length(common_genes)))
+  #Subset the genes
+  expr_deg <- u1[u1$Gene_Symbol %in% u2$Gene_Symbol, ]
+  #Print the subset genes
+  print(head(expr_deg))
+  #Take average if duplicate gene entries are present by grouping all gene symbols and averaging the numeric columns
+  expr_deg_avg <- expr_deg %>%
+    group_by(Gene_Symbol) %>%                    
+    summarise(across(where(is.numeric), mean))
+  #Convert to a matrix
+  expr_matrix <- as.matrix(expr_deg_avg[, -1])  # Remove Gene_Symbol column
+  #Perform scaling
+  expr_scaled <- t(scale(t(expr_matrix)))
+  #Convert back to a data frame
+  expr_scaled <- as.data.frame(expr_scaled)
+  #Generate heatmap
+  pheatmap(expr_scaled,
+           cluster_rows = TRUE, cluster_cols = TRUE,
+           show_rownames = TRUE, show_colnames = TRUE,
+           color = colorRampPalette(c("blue", "white", "red"))(100),
+           fontsize_row = 6,
+           main = paste("Heatmap for ", i))
+}
+#Close the PDF file
 dev.off()
